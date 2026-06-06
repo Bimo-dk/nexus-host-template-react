@@ -7,6 +7,19 @@ COPY package*.json .npmrc ./
 # @bimo-dk/* packages are public on npmjs.com — no auth required.
 RUN npm install --no-audit --no-fund --legacy-peer-deps
 
+# Workaround for @bimo-dk/nexus-client@0.1.0: the RegistryClient ctor
+# throws "token is required" when called from the browser without a
+# NEXUS_TOKEN, violating the trust-boundary model (token never reaches
+# the browser; the gateway injects it). Patch the installed bundle so
+# an empty token logs a warning and continues. Drop once nexus-client
+# republishes with the fix.
+RUN for f in node_modules/@bimo-dk/nexus-client/dist/index.cjs node_modules/@bimo-dk/nexus-client/dist/index.mjs; do \
+      sed -i \
+        -e 's/throw new Error("RegistryClient: token is required")/console.warn("[nexus-client] no token; gateway injects")/g' \
+        -e 's|options\.registryUrl\.replace(/\\/\$/, "")|options.registryUrl.replace(/\\/\$/, "").replace(/\\/api\$/, "")|g' \
+        "$f"; \
+    done
+
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
 
