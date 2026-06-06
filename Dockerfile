@@ -4,16 +4,14 @@ WORKDIR /app
 
 COPY package*.json .npmrc ./
 
-RUN --mount=type=secret,id=node_auth_token,required=true \
-    NODE_AUTH_TOKEN=$(cat /run/secrets/node_auth_token) \
-    npm install --no-audit --no-fund
+# @bimo-dk/* packages are public on npmjs.com — no auth required.
+RUN npm install --no-audit --no-fund --legacy-peer-deps
 
 COPY tsconfig.json vite.config.ts index.html ./
 COPY src ./src
 
-RUN --mount=type=secret,id=nexus_token \
-    VITE_NEXUS_TOKEN=$(cat /run/secrets/nexus_token 2>/dev/null || echo "dev-token") \
-    npm run build:prod
+# VITE_NEXUS_TOKEN is read at runtime by the entrypoint, not baked in.
+RUN npm run build:prod
 
 FROM nginx:alpine
 RUN apk add --no-cache wget curl jq
@@ -26,6 +24,6 @@ RUN chmod +x /docker-entrypoint.sh
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost/health || exit 1
+  CMD wget -qO- http://127.0.0.1/health || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
