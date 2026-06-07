@@ -45,8 +45,16 @@ export function App(): React.ReactElement {
     const ws = new RegistryWebSocket({ registryUrl, token });
 
     const unsub = ws.onMessage(msg => {
-      if (msg.type === 'connected' || msg.type === 'registry_updated') {
-        mergeRemotes(msg.remotes);
+      // Registry sends 'welcome' on connect + 'remotes_changed' on
+      // updates; the old names predate AUDIT_REPORT BUG-6 and only
+      // survived in @bimo-dk/nexus-client@0.1.0 on npm.
+      if (msg.type === 'welcome' || msg.type === 'remotes_changed') {
+        // Defensive: published @bimo-dk/nexus-client@0.1.0 surfaced an
+        // alternate payload shape; undefined remotes crashed the host
+        // on the first WS frame. Skip gracefully.
+        if (Array.isArray(msg.remotes)) {
+          mergeRemotes(msg.remotes);
+        }
       }
     });
 
@@ -128,7 +136,11 @@ export function App(): React.ReactElement {
                   element={<RemoteView remoteEntry={r.url} exposedModule={r.exposedModule} />}
                 />
               ))}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              {/* No catch-all: on first paint `remotes` is still empty, so
+                  any deep link like /vue-app would match * first and the
+                  user is redirected away before the remote route is
+                  registered. Letting the path render an empty <main> is
+                  better than the redirect-then-flash UX. */}
             </Routes>
           </main>
         </div>
