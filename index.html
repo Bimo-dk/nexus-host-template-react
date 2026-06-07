@@ -22,6 +22,16 @@
         --health-unknown: #94a3b8;
       }
     </style>
+    <!--
+      es-module-shims so native-federation's late-injected import map
+      is honoured by the browser. Without it the dynamic chunks emitted
+      by Angular remotes (with shareAll() of @angular/core etc.) hit
+      "Failed to resolve module specifier" the moment they import a
+      shared bare name. shimMode keeps it out of the way of plain
+      first-party module loads. (B-22)
+    -->
+    <script type="esms-options">{ "shimMode": true, "polyfillEnable": ["css-modules", "json-modules"] }</script>
+    <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
   </head>
   <body>
     <div id="root"></div>

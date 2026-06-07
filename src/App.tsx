@@ -1,9 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { RegistryClient, RegistryWebSocket } from '@bimo-dk/nexus-client';
+import { initFederation } from '@softarc/native-federation-runtime';
 import type { RemoteConfig } from '@bimo-dk/nexus-core';
 import { RemoteView } from './RemoteView';
 import { Dashboard } from './Dashboard';
+
+const federationInitialized = new Set<string>();
+
+/**
+ * Initialise the native-federation share scope so framework-aware
+ * remotes (Angular remotes with shareAll(), etc.) can resolve their
+ * bare-specifier imports when loaded by this React host.
+ */
+async function initRemoteScope(remotes: RemoteConfig[]): Promise<void> {
+  const novel = remotes.filter((r) => r.enabled && !federationInitialized.has(r.name));
+  if (novel.length === 0) return;
+  const map: Record<string, string> = {};
+  for (const r of novel) {
+    map[r.name] = r.url;
+    federationInitialized.add(r.name);
+  }
+  try {
+    await initFederation(map);
+  } catch (err) {
+    console.warn('[nexus] initFederation failed for some remotes:', err);
+  }
+}
 
 declare global {
   interface Window {
@@ -27,6 +50,11 @@ export function App(): React.ReactElement {
 
   function mergeRemotes(incoming: RemoteConfig[]): void {
     setOnline(true);
+    // Fire-and-forget — the share scope is needed before bare-specifier
+    // imports in framework-aware remote chunks resolve. BYOF remotes
+    // that bundle their runtime don't need this, but initialising for
+    // them is a no-op.
+    void initRemoteScope(incoming);
     setRemotes(prev => {
       const known = new Set(prev.map(r => r.name));
       const next = [...prev];
