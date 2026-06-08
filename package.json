@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@bimo-dk/nexus-client": "^0.1.0",
-    "@bimo-dk/nexus-core": "^0.1.0",
+    "@bimo-dk/nexus-client": "^1.0.0",
+    "@bimo-dk/nexus-core": "^1.0.0",
     "@softarc/native-federation-runtime": "^2.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
